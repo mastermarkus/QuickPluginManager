@@ -28,8 +28,8 @@ const PLUGIN_SELF_NAME = "QuickPluginManager"
 var _plugin_menu_btn = MenuButton.new()
 var _plugins_menu =  _plugin_menu_btn.get_popup()
 
-var plugins_data = {}
-var menu_items_idx = 0
+var _plugins_data = {}
+var _menu_items_idx = 0
 
 
 
@@ -37,13 +37,41 @@ func _enter_tree():
 	_plugin_menu_btn.text = POPUP_BUTTON_TEXT
 	_plugin_menu_btn.hint_tooltip = MENU_BUTTON_TOOLTIP
 	
+	_populate_menu()
 	
-	var addons_dir = Directory.new()
+	_plugins_menu.connect("index_pressed", self, "_item_toggled", [_plugins_menu])
+	_plugin_menu_btn.connect("about_to_show", self, "_menu_popup_about_to_show")
+
+	add_control_to_container(EditorPlugin.CONTAINER_TOOLBAR, _plugin_menu_btn)
+
+
+func _item_toggled(item_index, menuObj):
+	var is_item_checked = menuObj.is_item_checked(item_index)
+	_plugins_menu.set_item_checked(item_index, not is_item_checked)
+
+	for plugin_name in _plugins_data:
+		var plugin_info = _plugins_data[plugin_name]
+		
+		if item_index == plugin_info.menu_item_index:
+			var plugin_folder_name = plugin_info.plugin_folder
+			get_editor_interface().set_plugin_enabled(plugin_folder_name, not is_item_checked)
+
+
+
+func _refresh_plugins_menu_list():
+	_plugins_menu.clear()
+	_menu_items_idx = 0
+	_plugins_data.clear()
+	_populate_menu()
+
+
+func _populate_menu():
 	
 	var SKIP_NAVIGATIONAL = true
 	var SKIP_HIDDEN_FILES = false
 	var PLUGIN_CFG_FILE_NAME = "plugin.cfg"
 	
+	var addons_dir = Directory.new()
 	
 	if addons_dir.open(PLUGIN_PATH) == OK:
 		addons_dir.list_dir_begin(SKIP_NAVIGATIONAL, SKIP_HIDDEN_FILES)
@@ -61,42 +89,29 @@ func _enter_tree():
 					#the name of plugin folder inside "res://addons"
 					var plugin_info = {
 						"plugin_folder":file_name,
-						"menu_item_index":menu_items_idx
+						"menu_item_index":_menu_items_idx
 						}
 					
 					_plugins_menu.add_check_item(plugin_name)
 						
 					if plugin_name == PLUGIN_SELF_NAME:
-						_plugins_menu.set_item_disabled(menu_items_idx, true)
-
-					var isPluginEnabledByDefault = get_editor_interface().is_plugin_enabled(file_name)
-					_plugins_menu.set_item_checked(menu_items_idx, isPluginEnabledByDefault)
+						_plugins_menu.set_item_disabled(_menu_items_idx, true)
+	
+					var isPluginEnabled = get_editor_interface().is_plugin_enabled(file_name)
+					_plugins_menu.set_item_checked(_menu_items_idx, isPluginEnabled)
 					
-					plugins_data[plugin_name] = plugin_info
-					menu_items_idx += 1
+					_plugins_data[plugin_name] = plugin_info
+					_menu_items_idx += 1
 			else:
 				pass
 				#print("is file: " + file_name)
 			file_name =  addons_dir.get_next()
 	else:
 		print("An error occurred when trying to access the path.")
-	
-	
-	_plugins_menu.connect("index_pressed", self, "item_toggled", [_plugins_menu])
-
-	add_control_to_container(EditorPlugin.CONTAINER_TOOLBAR, _plugin_menu_btn)
 
 
-func item_toggled(item_index, menuObj):
-	var is_item_checked = menuObj.is_item_checked(item_index)
-	_plugins_menu.set_item_checked(item_index, not is_item_checked)
-
-	for plugin_name in plugins_data:
-		var plugin_info = plugins_data[plugin_name]
-		
-		if item_index == plugin_info.menu_item_index:
-			var plugin_folder_name = plugin_info.plugin_folder
-			get_editor_interface().set_plugin_enabled(plugin_folder_name, not is_item_checked)
+func _menu_popup_about_to_show():
+	_refresh_plugins_menu_list()
 
 
 #clean up
