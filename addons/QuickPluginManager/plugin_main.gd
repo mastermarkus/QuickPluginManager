@@ -87,25 +87,29 @@ func _populate_menu():
 					conf.load(conf_file_path)
 					var plugin_name = str(conf.get_value("plugin", "name"))
 					#the name of plugin folder inside "res://addons"
+					
 					var plugin_info = {
 						"plugin_folder":file_name,
 						"menu_item_index":_menu_items_idx
 						}
 					
-					_plugins_menu.add_check_item(plugin_name)
-						
-					if plugin_name == PLUGIN_SELF_NAME:
-						_plugins_menu.set_item_disabled(_menu_items_idx, true)
-	
 					var isPluginEnabled = get_editor_interface().is_plugin_enabled(file_name)
-					_plugins_menu.set_item_checked(_menu_items_idx, isPluginEnabled)
 					
-					_plugins_data[plugin_name] = plugin_info
-					_menu_items_idx += 1
+					if plugin_name != PLUGIN_SELF_NAME:
+						_plugins_menu.add_check_item(plugin_name)
+						_plugins_menu.set_item_checked(_menu_items_idx, isPluginEnabled)
+						_plugins_data[plugin_name] = plugin_info
+						_menu_items_idx += 1
 			else:
 				pass
 				#print("is file: " + file_name)
 			file_name =  addons_dir.get_next()
+		
+		#no need to increment "_menu_items_idx" as we already did it above
+		#add plugin itself as last item to menu
+		_plugins_menu.add_check_item(PLUGIN_SELF_NAME)
+		_plugins_menu.set_item_checked(_menu_items_idx, get_editor_interface().is_plugin_enabled(PLUGIN_SELF_NAME))
+		_plugins_menu.set_item_disabled(_menu_items_idx, true)
 	else:
 		print("An error occurred when trying to access the path.")
 
